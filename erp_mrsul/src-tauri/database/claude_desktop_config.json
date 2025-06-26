@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "erp-sqlite": {
+      "command": "node",
+      "args": ["c:\\Users\\Cliente\\Desktop\\erp_mrsul\\erp_mrsul\\src-tauri\\database\\dist\\index.js"],
+      "env": {}
+    }
+  }
+}

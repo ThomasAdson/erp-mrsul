@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Criar Tabela Production Orders</title>
+</head>
+<body>
+    <h1>Criando tabela production_orders...</h1>
+    <p>Aguarde...</p>
+    
+    <script>
+        // Script temporário para criar a tabela production_orders
+        const { invoke } = window.__TAURI__.core;
+
+        async function createProductionOrdersTable() {
+            try {
+                const result = await invoke('create_production_orders_table');
+                console.log('✅ Sucesso:', result);
+                alert('Tabela criada com sucesso!');
+                document.body.innerHTML += '<p style="color: green;">✅ ' + result + '</p>';
+            } catch (error) {
+                console.error('❌ Erro:', error);
+                alert('Erro ao criar tabela: ' + error);
+                document.body.innerHTML += '<p style="color: red;">❌ Erro: ' + error + '</p>';
+            }
+        }
+
+        // Executar automaticamente quando a página carregar
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Criando tabela production_orders...');
+            createProductionOrdersTable();
+        });
+    </script>
+</body>
+</html>

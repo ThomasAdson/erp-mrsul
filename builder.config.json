@@ -1,0 +1,6 @@
+{
+  "command": "cd erp_mrsul && npm run tauri dev",
+  "serverUrl": "http://localhost:1420/",
+  "authenticateProxy": false,
+  "commitMode": "commits"
+}

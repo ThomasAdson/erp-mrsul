@@ -1,0 +1,15 @@
+{
+  "name": "erp-mrsul-workspace",
+  "private": true,
+  "scripts": {
+    "dev": "cd erp_mrsul && npm run tauri dev",
+    "dev:web": "cd erp_mrsul && npm run dev",
+    "build": "cd erp_mrsul && npm run tauri build",
+    "preview": "cd erp_mrsul && npm run preview",
+    "tauri": "cd erp_mrsul && npm run tauri"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.6",
+    "@types/react-dom": "^19.1.5"
+  }
+}
