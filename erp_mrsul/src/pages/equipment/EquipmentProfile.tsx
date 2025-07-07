@@ -33,14 +33,14 @@ const EquipmentProfile = () => {
     try {
       setLoading(true);
       setError(null);
-      console.log('🔄 [FRONTEND] Loading equipment profile:', equipmentId);
+      // console.log('🔄 [FRONTEND] Loading equipment profile:', equipmentId);
       
       const data = await getEquipment(equipmentId);
       setEquipment(data);
       
-      console.log('✅ [FRONTEND] Equipment profile loaded:', data);
+      // console.log('✅ [FRONTEND] Equipment profile loaded:', data);
     } catch (error) {
-      console.error('❌ [FRONTEND] Failed to load equipment:', error);
+      // console.error('❌ [FRONTEND] Failed to load equipment:', error);
       setError(error instanceof Error ? error.message : 'Erro ao carregar equipamento');
       toast({
         title: "Erro",
@@ -54,7 +54,7 @@ const EquipmentProfile = () => {
 
   const loadSpecifications = async (equipmentId: string) => {
     try {
-      console.log('🔄 [FRONTEND] Loading equipment specifications:', equipmentId);
+      // console.log('🔄 [FRONTEND] Loading equipment specifications:', equipmentId);
       
       // Carregar especificações existentes do banco de dados
       const existingSpecs = await getEquipmentSpecifications(equipmentId);
@@ -68,9 +68,9 @@ const EquipmentProfile = () => {
       }
       
       setSpecifications(specsObject);
-      console.log('✅ [FRONTEND] Equipment specifications loaded:', specsObject);
+      // console.log('✅ [FRONTEND] Equipment specifications loaded:', specsObject);
     } catch (error) {
-      console.error('❌ [FRONTEND] Failed to load specifications:', error);
+      // console.error('❌ [FRONTEND] Failed to load specifications:', error);
       // Não exibir toast de erro para especificações, pois é uma falha "silenciosa"
       // (pode não ter especificações salvas ainda)
     }

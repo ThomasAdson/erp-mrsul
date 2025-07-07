@@ -1,6 +1,7 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 mod db;
 use db::init_db;
+use chrono::Utc;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -11,6 +12,14 @@ mod fornecedores;
 use fornecedores::{
     create_fornecedor, get_all_fornecedores, get_fornecedor_by_id, 
     update_fornecedor, delete_fornecedor
+};
+mod purchase_orders;
+use purchase_orders::{
+    create_purchase_order, get_all_purchase_orders, get_purchase_order_by_id,
+    get_purchase_order_details, update_purchase_order_status,
+    receive_purchase_order_items,
+    update_purchase_order_voucher, view_purchase_order_voucher, download_purchase_order_voucher,
+    save_purchase_order_voucher
 };
 mod production_order_materials;
 use production_order_materials::{
@@ -281,8 +290,29 @@ fn create_material(
     created_at: String,
     estoque_atual: f64,
     estoque_minimo: Option<f64>,
+    // Novos campos de custos
+    custo_padrao_por_unidade_compra: Option<f64>,
+    unidade_compra_padrao: Option<String>,
+    peso_linear_kg_m: Option<f64>,
+    peso_superficial_kg_m2: Option<f64>,
 ) -> Result<Material, String> {
     let id = uuid::Uuid::new_v4().to_string();
+    
+    // Calcular custo por unidade de estoque
+    let custo_por_unidade_estoque = calculate_cost_per_stock_unit(
+        &unidade_medida,
+        &unidade_compra_padrao,
+        custo_padrao_por_unidade_compra,
+        peso_linear_kg_m,
+        peso_superficial_kg_m2,
+    );
+    
+    let ultima_atualizacao_custo_padrao = if custo_padrao_por_unidade_compra.is_some() {
+        Some(chrono::Utc::now().to_rfc3339())
+    } else {
+        None
+    };
+    
     let new_material = Material {
         id: id.clone(),
         categoria_id: categoria_id.clone(),
@@ -296,19 +326,51 @@ fn create_material(
         created_at: created_at.clone(),
         estoque_atual,
         estoque_minimo,
+        custo_padrao_por_unidade_compra,
+        unidade_compra_padrao: unidade_compra_padrao.clone(),
+        ultima_atualizacao_custo_padrao: ultima_atualizacao_custo_padrao.clone(),
+        peso_linear_kg_m,
+        peso_superficial_kg_m2,
+        custo_por_unidade_estoque,
     };
+    
     let conn = db::DB_CONN.lock().unwrap();
     conn.execute(
-        "INSERT INTO materiais (id, categoria_id, codigo_especificacao, descricao_especificacao, material_composicao, unidade_medida, codigo_material_completo, descricao_completa, observacoes, created_at, estoque_atual, estoque_minimo) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
-        rusqlite::params![id, categoria_id, codigo_especificacao, descricao_especificacao, material_composicao, unidade_medida, codigo_material_completo, descricao_completa, observacoes, created_at, estoque_atual, estoque_minimo],
+        "INSERT INTO materiais (
+            id, categoria_id, codigo_especificacao, descricao_especificacao, 
+            material_composicao, unidade_medida, codigo_material_completo, 
+            descricao_completa, observacoes, created_at, estoque_atual, estoque_minimo,
+            custo_padrao_por_unidade_compra, unidade_compra_padrao, 
+            ultima_atualizacao_custo_padrao, peso_linear_kg_m, 
+            peso_superficial_kg_m2, custo_por_unidade_estoque
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)",
+        rusqlite::params![
+            id, categoria_id, codigo_especificacao, descricao_especificacao, 
+            material_composicao, unidade_medida, codigo_material_completo, 
+            descricao_completa, observacoes, created_at, estoque_atual, estoque_minimo,
+            custo_padrao_por_unidade_compra, unidade_compra_padrao, 
+            ultima_atualizacao_custo_padrao, peso_linear_kg_m, 
+            peso_superficial_kg_m2, custo_por_unidade_estoque
+        ],
     ).map_err(|e| e.to_string())?;
+    
     Ok(new_material)
 }
 
 #[tauri::command]
 fn list_materiais() -> Result<Vec<Material>, String> {
     let conn = db::DB_CONN.lock().unwrap();
-    let mut stmt = conn.prepare("SELECT id, categoria_id, codigo_especificacao, descricao_especificacao, material_composicao, unidade_medida, codigo_material_completo, descricao_completa, observacoes, created_at, estoque_atual, estoque_minimo FROM materiais").map_err(|e| e.to_string())?;
+    let mut stmt = conn.prepare("
+        SELECT 
+            id, categoria_id, codigo_especificacao, descricao_especificacao, 
+            material_composicao, unidade_medida, codigo_material_completo, 
+            descricao_completa, observacoes, created_at, estoque_atual, estoque_minimo,
+            custo_padrao_por_unidade_compra, unidade_compra_padrao, 
+            ultima_atualizacao_custo_padrao, peso_linear_kg_m, 
+            peso_superficial_kg_m2, custo_por_unidade_estoque
+        FROM materiais
+    ").map_err(|e| e.to_string())?;
+    
     let rows = stmt.query_map([], |row| {
         Ok(Material {
             id: row.get(0)?,
@@ -323,8 +385,15 @@ fn list_materiais() -> Result<Vec<Material>, String> {
             created_at: row.get(9)?,
             estoque_atual: row.get(10)?,
             estoque_minimo: row.get(11).ok(),
+            custo_padrao_por_unidade_compra: row.get(12).ok(),
+            unidade_compra_padrao: row.get(13).ok(),
+            ultima_atualizacao_custo_padrao: row.get(14).ok(),
+            peso_linear_kg_m: row.get(15).ok(),
+            peso_superficial_kg_m2: row.get(16).ok(),
+            custo_por_unidade_estoque: row.get(17).ok(),
         })
     }).map_err(|e| e.to_string())?;
+    
     let mut result = Vec::new();
     for row in rows {
         result.push(row.map_err(|e| e.to_string())?);
@@ -345,13 +414,58 @@ fn update_material(
     observacoes: Option<String>,
     estoque_atual: f64,
     estoque_minimo: Option<f64>,
+    // Novos campos de custos
+    custo_padrao_por_unidade_compra: Option<f64>,
+    unidade_compra_padrao: Option<String>,
+    peso_linear_kg_m: Option<f64>,
+    peso_superficial_kg_m2: Option<f64>,
 ) -> Result<Material, String> {
+    // Calcular custo por unidade de estoque
+    let custo_por_unidade_estoque = calculate_cost_per_stock_unit(
+        &unidade_medida,
+        &unidade_compra_padrao,
+        custo_padrao_por_unidade_compra,
+        peso_linear_kg_m,
+        peso_superficial_kg_m2,
+    );
+    
+    let ultima_atualizacao_custo_padrao = if custo_padrao_por_unidade_compra.is_some() {
+        Some(chrono::Utc::now().to_rfc3339())
+    } else {
+        None
+    };
+    
     let conn = db::DB_CONN.lock().unwrap();
     conn.execute(
-        "UPDATE materiais SET categoria_id = ?1, codigo_especificacao = ?2, descricao_especificacao = ?3, material_composicao = ?4, unidade_medida = ?5, codigo_material_completo = ?6, descricao_completa = ?7, observacoes = ?8, estoque_atual = ?9, estoque_minimo = ?10 WHERE id = ?11",
-        rusqlite::params![categoria_id, codigo_especificacao, descricao_especificacao, material_composicao, unidade_medida, codigo_material_completo, descricao_completa, observacoes, estoque_atual, estoque_minimo, id],
+        "UPDATE materiais SET 
+            categoria_id = ?1, codigo_especificacao = ?2, descricao_especificacao = ?3, 
+            material_composicao = ?4, unidade_medida = ?5, codigo_material_completo = ?6, 
+            descricao_completa = ?7, observacoes = ?8, estoque_atual = ?9, estoque_minimo = ?10,
+            custo_padrao_por_unidade_compra = ?11, unidade_compra_padrao = ?12, 
+            ultima_atualizacao_custo_padrao = ?13, peso_linear_kg_m = ?14, 
+            peso_superficial_kg_m2 = ?15, custo_por_unidade_estoque = ?16
+        WHERE id = ?17",
+        rusqlite::params![
+            categoria_id, codigo_especificacao, descricao_especificacao, 
+            material_composicao, unidade_medida, codigo_material_completo, 
+            descricao_completa, observacoes, estoque_atual, estoque_minimo,
+            custo_padrao_por_unidade_compra, unidade_compra_padrao, 
+            ultima_atualizacao_custo_padrao, peso_linear_kg_m, 
+            peso_superficial_kg_m2, custo_por_unidade_estoque, id
+        ],
     ).map_err(|e| e.to_string())?;
-    let mut stmt = conn.prepare("SELECT id, categoria_id, codigo_especificacao, descricao_especificacao, material_composicao, unidade_medida, codigo_material_completo, descricao_completa, observacoes, created_at, estoque_atual, estoque_minimo FROM materiais WHERE id = ?1").map_err(|e| e.to_string())?;
+    
+    let mut stmt = conn.prepare("
+        SELECT 
+            id, categoria_id, codigo_especificacao, descricao_especificacao, 
+            material_composicao, unidade_medida, codigo_material_completo, 
+            descricao_completa, observacoes, created_at, estoque_atual, estoque_minimo,
+            custo_padrao_por_unidade_compra, unidade_compra_padrao, 
+            ultima_atualizacao_custo_padrao, peso_linear_kg_m, 
+            peso_superficial_kg_m2, custo_por_unidade_estoque
+        FROM materiais WHERE id = ?1
+    ").map_err(|e| e.to_string())?;
+    
     let mut rows = stmt.query_map(rusqlite::params![id], |row| {
         Ok(Material {
             id: row.get(0)?,
@@ -366,8 +480,15 @@ fn update_material(
             created_at: row.get(9)?,
             estoque_atual: row.get(10)?,
             estoque_minimo: row.get(11).ok(),
+            custo_padrao_por_unidade_compra: row.get(12).ok(),
+            unidade_compra_padrao: row.get(13).ok(),
+            ultima_atualizacao_custo_padrao: row.get(14).ok(),
+            peso_linear_kg_m: row.get(15).ok(),
+            peso_superficial_kg_m2: row.get(16).ok(),
+            custo_por_unidade_estoque: row.get(17).ok(),
         })
     }).map_err(|e| e.to_string())?;
+    
     if let Some(row) = rows.next() {
         return row.map_err(|e| e.to_string());
     }
@@ -786,6 +907,263 @@ fn download_op_file(request: DownloadOpFileRequest) -> Result<Vec<u8>, String> {
     result
 }
 
+// Função para calcular custo por unidade de estoque
+fn calculate_cost_per_stock_unit(
+    unidade_medida: &str,
+    unidade_compra_padrao: &Option<String>,
+    custo_padrao_por_unidade_compra: Option<f64>,
+    peso_linear_kg_m: Option<f64>,
+    peso_superficial_kg_m2: Option<f64>,
+) -> Option<f64> {
+    // Se não há custo padrão definido, retorna None
+    let custo_padrao = custo_padrao_por_unidade_compra?;
+    let unidade_compra = unidade_compra_padrao.as_ref()?;
+    
+    // Cenário 1: Material Linear (metro + kg)
+    if unidade_medida == "metro" && unidade_compra == "kg" {
+        if let Some(peso_linear) = peso_linear_kg_m {
+            return Some(peso_linear * custo_padrao);
+        }
+    }
+    
+    // Cenário 2: Material Superficial (m² + kg)
+    if unidade_medida == "m2" && unidade_compra == "kg" {
+        if let Some(peso_superficial) = peso_superficial_kg_m2 {
+            return Some(peso_superficial * custo_padrao);
+        }
+    }
+    
+    // Cenário 3: Material Unitário (mesma unidade)
+    if unidade_medida == unidade_compra {
+        return Some(custo_padrao);
+    }
+    
+    // Se não há lógica aplicável, retorna None
+    None
+}
+
+#[tauri::command]
+fn export_materials_to_csv() -> Result<String, String> {
+    let conn = db::DB_CONN.lock().unwrap();
+    let mut stmt = conn.prepare("
+        SELECT 
+            categoria_id, codigo_especificacao, descricao_especificacao, 
+            material_composicao, unidade_medida, codigo_material_completo, 
+            descricao_completa, observacoes, estoque_atual, estoque_minimo,
+            custo_padrao_por_unidade_compra, unidade_compra_padrao, 
+            peso_linear_kg_m, peso_superficial_kg_m2
+        FROM materiais
+        ORDER BY codigo_material_completo
+    ").map_err(|e| e.to_string())?;
+    
+    let rows = stmt.query_map([], |row| {
+        Ok((
+            row.get::<_, String>(0)?,  // categoria_id
+            row.get::<_, String>(1)?,  // codigo_especificacao
+            row.get::<_, String>(2)?,  // descricao_especificacao
+            row.get::<_, String>(3)?,  // material_composicao
+            row.get::<_, String>(4)?,  // unidade_medida
+            row.get::<_, String>(5)?,  // codigo_material_completo
+            row.get::<_, String>(6)?,  // descricao_completa
+            row.get::<_, Option<String>>(7)?,  // observacoes
+            row.get::<_, f64>(8)?,     // estoque_atual
+            row.get::<_, Option<f64>>(9)?,     // estoque_minimo
+            row.get::<_, Option<f64>>(10)?,    // custo_padrao_por_unidade_compra
+            row.get::<_, Option<String>>(11)?, // unidade_compra_padrao
+            row.get::<_, Option<f64>>(12)?,    // peso_linear_kg_m
+            row.get::<_, Option<f64>>(13)?,    // peso_superficial_kg_m2
+        ))
+    }).map_err(|e| e.to_string())?;
+    
+    let mut csv_content = String::new();
+    
+    // Cabeçalho CSV
+    csv_content.push_str("categoria_id,codigo_especificacao,descricao_especificacao,material_composicao,unidade_medida,codigo_material_completo,descricao_completa,observacoes,estoque_atual,estoque_minimo,custo_padrao_por_unidade_compra,unidade_compra_padrao,peso_linear_kg_m,peso_superficial_kg_m2\n");
+    
+    // Dados
+    for row in rows {
+        let (categoria_id, codigo_especificacao, descricao_especificacao, material_composicao, 
+             unidade_medida, codigo_material_completo, descricao_completa, observacoes, 
+             estoque_atual, estoque_minimo, custo_padrao_por_unidade_compra, 
+             unidade_compra_padrao, peso_linear_kg_m, peso_superficial_kg_m2) = row.map_err(|e| e.to_string())?;
+        
+        csv_content.push_str(&format!(
+            "{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n",
+            categoria_id,
+            codigo_especificacao,
+            descricao_especificacao,
+            material_composicao,
+            unidade_medida,
+            codigo_material_completo,
+            descricao_completa,
+            observacoes.unwrap_or_default(),
+            estoque_atual,
+            estoque_minimo.map_or(String::new(), |v| v.to_string()),
+            custo_padrao_por_unidade_compra.map_or(String::new(), |v| v.to_string()),
+            unidade_compra_padrao.unwrap_or_default(),
+            peso_linear_kg_m.map_or(String::new(), |v| v.to_string()),
+            peso_superficial_kg_m2.map_or(String::new(), |v| v.to_string())
+        ));
+    }
+    
+    Ok(csv_content)
+}
+
+#[tauri::command]
+fn get_materials_template_csv() -> Result<String, String> {
+    let template = "categoria_id,codigo_especificacao,descricao_especificacao,material_composicao,unidade_medida,codigo_material_completo,descricao_completa,observacoes,estoque_atual,estoque_minimo,custo_padrao_por_unidade_compra,unidade_compra_padrao,peso_linear_kg_m,peso_superficial_kg_m2
+exemplo-categoria-id,001,20x20x2,ASTM A36,metro,001-001-001,Tubo Quadrado - 20x20x2,,15.5,10,8.50,kg,1.47,
+exemplo-categoria-id,002,Chapa 3mm,ASTM A36,m2,002-001-001,Chapa de Aço 3mm,,25.0,5,7.80,kg,,23.5
+exemplo-categoria-id,003,Parafuso M8x20,Aço Inox,peça,003-001-001,Parafuso Inox M8x20,,100,50,0.85,peça,,
+";
+    Ok(template.to_string())
+}
+
+#[tauri::command]
+fn import_materials_from_csv(csv_content: String) -> Result<String, String> {
+    let conn = db::DB_CONN.lock().unwrap();
+    let mut imported_count = 0;
+    let mut error_count = 0;
+    let mut errors = Vec::new();
+    
+    let lines: Vec<&str> = csv_content.lines().collect();
+    if lines.is_empty() {
+        return Err("CSV vazio".to_string());
+    }
+    
+    // Pular cabeçalho (primeira linha)
+    for (line_num, line) in lines.iter().skip(1).enumerate() {
+        if line.trim().is_empty() {
+            continue;
+        }
+        
+        let fields: Vec<&str> = line.split(',').collect();
+        if fields.len() < 14 {
+            error_count += 1;
+            errors.push(format!("Linha {}: Número insuficiente de campos (esperado 14, encontrado {})", line_num + 2, fields.len()));
+            continue;
+        }
+        
+        let id = uuid::Uuid::new_v4().to_string();
+        let created_at = Utc::now().to_rfc3339();
+        
+        // Converter campos opcionais
+        let observacoes = if fields[7].trim().is_empty() { None } else { Some(fields[7].trim().to_string()) };
+        let estoque_minimo = if fields[9].trim().is_empty() { None } else { 
+            match fields[9].trim().parse::<f64>() {
+                Ok(val) => Some(val),
+                Err(_) => {
+                    error_count += 1;
+                    errors.push(format!("Linha {}: Estoque mínimo inválido: '{}'", line_num + 2, fields[9]));
+                    continue;
+                }
+            }
+        };
+        
+        let custo_padrao_por_unidade_compra = if fields[10].trim().is_empty() { None } else {
+            match fields[10].trim().parse::<f64>() {
+                Ok(val) => Some(val),
+                Err(_) => {
+                    error_count += 1;
+                    errors.push(format!("Linha {}: Custo padrão inválido: '{}'", line_num + 2, fields[10]));
+                    continue;
+                }
+            }
+        };
+        
+        let unidade_compra_padrao = if fields[11].trim().is_empty() { None } else { Some(fields[11].trim().to_string()) };
+        
+        let peso_linear_kg_m = if fields[12].trim().is_empty() { None } else {
+            match fields[12].trim().parse::<f64>() {
+                Ok(val) => Some(val),
+                Err(_) => {
+                    error_count += 1;
+                    errors.push(format!("Linha {}: Peso linear inválido: '{}'", line_num + 2, fields[12]));
+                    continue;
+                }
+            }
+        };
+        
+        let peso_superficial_kg_m2 = if fields[13].trim().is_empty() { None } else {
+            match fields[13].trim().parse::<f64>() {
+                Ok(val) => Some(val),
+                Err(_) => {
+                    error_count += 1;
+                    errors.push(format!("Linha {}: Peso superficial inválido: '{}'", line_num + 2, fields[13]));
+                    continue;
+                }
+            }
+        };
+        
+        // Calcular custo por unidade de estoque
+        let custo_por_unidade_estoque = calculate_cost_per_stock_unit(
+            fields[4].trim(), // unidade_medida
+            &unidade_compra_padrao,
+            custo_padrao_por_unidade_compra,
+            peso_linear_kg_m,
+            peso_superficial_kg_m2,
+        );
+        
+        let ultima_atualizacao_custo_padrao = if custo_padrao_por_unidade_compra.is_some() {
+            Some(created_at.clone())
+        } else {
+            None
+        };
+        
+        // Converter estoque_atual
+        let estoque_atual = match fields[8].trim().parse::<f64>() {
+            Ok(val) => val,
+            Err(_) => {
+                error_count += 1;
+                errors.push(format!("Linha {}: Estoque atual inválido: '{}'", line_num + 2, fields[8]));
+                continue;
+            }
+        };
+        
+        // Inserir no banco
+        match conn.execute(
+            "INSERT INTO materiais (
+                id, categoria_id, codigo_especificacao, descricao_especificacao, 
+                material_composicao, unidade_medida, codigo_material_completo, 
+                descricao_completa, observacoes, created_at, estoque_atual, estoque_minimo,
+                custo_padrao_por_unidade_compra, unidade_compra_padrao, 
+                ultima_atualizacao_custo_padrao, peso_linear_kg_m, 
+                peso_superficial_kg_m2, custo_por_unidade_estoque
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)",
+            rusqlite::params![
+                id, fields[0].trim(), fields[1].trim(), fields[2].trim(),
+                fields[3].trim(), fields[4].trim(), fields[5].trim(),
+                fields[6].trim(), observacoes, created_at, estoque_atual, estoque_minimo,
+                custo_padrao_por_unidade_compra, unidade_compra_padrao,
+                ultima_atualizacao_custo_padrao, peso_linear_kg_m,
+                peso_superficial_kg_m2, custo_por_unidade_estoque
+            ],
+        ) {
+            Ok(_) => imported_count += 1,
+            Err(e) => {
+                error_count += 1;
+                errors.push(format!("Linha {}: Erro ao inserir no banco: {}", line_num + 2, e));
+            }
+        }
+    }
+    
+    let mut result = format!("Importação concluída: {} materiais importados", imported_count);
+    if error_count > 0 {
+        result.push_str(&format!(", {} erros encontrados", error_count));
+        if !errors.is_empty() {
+            result.push_str("\n\nErros:");
+            for error in errors.iter().take(10) { // Mostrar apenas os primeiros 10 erros
+                result.push_str(&format!("\n- {}", error));
+            }
+            if errors.len() > 10 {
+                result.push_str(&format!("\n... e mais {} erros", errors.len() - 10));
+            }
+        }
+    }
+    
+    Ok(result)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -806,7 +1184,14 @@ pub fn run() {
             upload_file_to_op, get_op_files, delete_op_file, download_op_file,
             create_stock_movement, get_stock_movements, get_material_current_stock,
             create_fornecedor, get_all_fornecedores, get_fornecedor_by_id, update_fornecedor, delete_fornecedor,
-            add_material_to_production_order, get_production_order_materials, update_production_order_material, remove_material_from_production_order
+            add_material_to_production_order, get_production_order_materials, update_production_order_material, remove_material_from_production_order,
+            create_purchase_order, get_all_purchase_orders, get_purchase_order_by_id,
+            get_purchase_order_details, update_purchase_order_status,
+            receive_purchase_order_items,
+            update_purchase_order_voucher, view_purchase_order_voucher, download_purchase_order_voucher,
+            save_purchase_order_voucher,
+            export_materials_to_csv, get_materials_template_csv,
+            import_materials_from_csv
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

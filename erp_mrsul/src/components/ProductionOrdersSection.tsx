@@ -708,7 +708,7 @@ export default function ProductionOrdersSection({ equipmentId }: ProductionOrder
 
       {/* Modal de Criar OP */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="sm:max-w-[800px]">
+        <DialogContent className="sm:max-w-[1200px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Nova Ordem de Produção</DialogTitle>
             <DialogDescription>
@@ -861,7 +861,7 @@ export default function ProductionOrdersSection({ equipmentId }: ProductionOrder
         </DialogContent>
       </Dialog>      {/* Modal de Editar OP */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[1400px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-y-auto p-4">
           <DialogHeader>
             <DialogTitle>Editar Ordem de Produção</DialogTitle>
             <DialogDescription>
@@ -869,7 +869,7 @@ export default function ProductionOrdersSection({ equipmentId }: ProductionOrder
             </DialogDescription>
           </DialogHeader>
           
-          <div className="grid gap-6 py-4">
+          <div className="space-y-6 py-4 w-full max-w-full overflow-hidden">
             {/* Informações Básicas */}
             <div className="grid gap-4">
               <h3 className="text-lg font-semibold">Informações Básicas</h3>

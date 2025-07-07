@@ -17,6 +17,135 @@ export interface UpdateMaterialClassRequest {
   name?: string;
 }
 
+// Purchase Orders
+export interface PurchaseOrder {
+  id: string;
+  numero: string;
+  fornecedor_id: string;
+  projeto_id?: string;
+  data_pedido: string;
+  data_entrega_prevista?: string;
+  data_entrega_realizada?: string;
+  status: string;
+  valor_total: number;
+  observacoes?: string;
+  termo_pagamento?: string;
+  condicao_entrega?: string;
+  comprovante_nome?: string;
+  created_at: string;
+  updated_at: string;
+  created_by?: string;
+  updated_by?: string;
+}
+
+export interface PurchaseOrderItem {
+  id: string;
+  pedido_compra_id: string;
+  material_id: string;
+  quantidade_solicitada: number;
+  quantidade_recebida: number;
+  preco_unitario: number;
+  valor_total: number;
+  observacoes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PurchaseOrderItemWithMaterial {
+  id: string;
+  pedido_compra_id: string;
+  material_id: string;
+  material_codigo: string;
+  material_descricao: string;
+  material_unidade: string;
+  quantidade_solicitada: number;
+  quantidade_recebida: number;
+  preco_unitario: number;
+  valor_total: number;
+  observacoes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PurchaseOrderHistory {
+  id: string;
+  pedido_compra_id: string;
+  status_anterior?: string;
+  status_novo: string;
+  observacoes?: string;
+  created_at: string;
+  created_by?: string;
+}
+
+export interface PurchaseOrderWithDetails {
+  pedido: PurchaseOrder;
+  itens: PurchaseOrderItemWithMaterial[];
+  fornecedor?: FornecedorBasic;
+  projeto?: ProjectBasic;
+  historico: PurchaseOrderHistory[];
+}
+
+export interface FornecedorBasic {
+  id: string;
+  nome_fantasia: string;
+  razao_social: string;
+  cnpj: string;
+}
+
+export interface ProjectBasic {
+  id: string;
+  nome: string;
+  codigo: string;
+}
+
+export interface CreatePurchaseOrderRequest {
+  fornecedor_id: string;
+  projeto_id?: string;
+  data_entrega_prevista?: string;
+  observacoes?: string;
+  termo_pagamento?: string;
+  condicao_entrega?: string;
+  itens: CreatePurchaseOrderItemRequest[];
+}
+
+export interface CreatePurchaseOrderItemRequest {
+  material_id: string;
+  quantidade_solicitada: number;
+  preco_unitario: number;
+  observacoes?: string;
+}
+
+export interface UpdatePurchaseOrderRequest {
+  fornecedor_id?: string;
+  projeto_id?: string;
+  data_entrega_prevista?: string;
+  observacoes?: string;
+  termo_pagamento?: string;
+  condicao_entrega?: string;
+  itens?: CreatePurchaseOrderItemRequest[];
+}
+
+export interface PurchaseOrderFilters {
+  status?: string;
+  fornecedor_id?: string;
+  projeto_id?: string;
+  data_inicio?: string;
+  data_fim?: string;
+  search?: string;
+}
+
+// Purchase Order Status Constants
+export const PURCHASE_ORDER_STATUS = {
+  RASCUNHO: 'rascunho',
+  ENVIADO: 'enviado',
+  CONFIRMADO: 'confirmado',
+  RECEBIMENTO_PARCIAL: 'recebimento_parcial',
+  RECEBIDO: 'recebido',
+  CANCELADO: 'cancelado',
+} as const;
+
+export type PurchaseOrderStatus = typeof PURCHASE_ORDER_STATUS[keyof typeof PURCHASE_ORDER_STATUS];
+
 // Client Interface
 export interface Client {
   id: string;

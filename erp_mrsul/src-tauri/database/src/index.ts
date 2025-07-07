@@ -10,7 +10,6 @@ import * as fs from "fs";
 
 // Configuração do banco de dados
 const DATABASE_PATH = "X:\\Thomas\\ERP\\erp_mrsul.db";
-const FALLBACK_DATABASE_PATH = "./erp_mrsul.db";
 
 // Classe para gerenciar conexão SQLite com promessas
 class SQLiteDatabase {
@@ -460,9 +459,9 @@ async function main() {
     // Verificar se o banco existe no caminho principal
     let dbPath = DATABASE_PATH;
     if (!fs.existsSync(DATABASE_PATH)) {
-      console.error(`Banco principal não encontrado em: ${DATABASE_PATH}`);
-      console.error(`Tentando conectar ao banco local: ${FALLBACK_DATABASE_PATH}`);
-      dbPath = FALLBACK_DATABASE_PATH;
+      console.error(`Banco não encontrado em: ${DATABASE_PATH}`);
+      console.error(`Verifique se o banco de dados existe no caminho correto.`);
+      process.exit(1);
     }
 
     // Inicializar e conectar ao banco com o caminho correto

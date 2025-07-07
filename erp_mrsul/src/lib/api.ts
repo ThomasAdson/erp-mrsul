@@ -213,6 +213,14 @@ export interface Material {
   created_at: string;
   estoque_atual: number;
   estoque_minimo?: number;
+  
+  // Campos de custos
+  custo_padrao_por_unidade_compra?: number;
+  unidade_compra_padrao?: string;
+  ultima_atualizacao_custo_padrao?: string;
+  peso_linear_kg_m?: number;
+  peso_superficial_kg_m2?: number;
+  custo_por_unidade_estoque?: number;
 }
 
 export const createMaterial = async (
@@ -231,6 +239,11 @@ export const createMaterial = async (
     estoqueAtual: data.estoque_atual,
     estoqueMinimo: data.estoque_minimo,
     createdAt: data.created_at,
+    // Novos campos de custos
+    custoPadraoPorUnidadeCompra: data.custo_padrao_por_unidade_compra,
+    unidadeCompraPadrao: data.unidade_compra_padrao,
+    pesoLinearKgM: data.peso_linear_kg_m,
+    pesoSuperficialKgM2: data.peso_superficial_kg_m2,
   };
   return await safeInvoke<Material>("create_material", payload);
 };
@@ -243,7 +256,26 @@ export const updateMaterial = async (
   id: string,
   data: Partial<Material>,
 ): Promise<Material> => {
-  return await safeInvoke<Material>("update_material", { id, ...data });
+  // Converte snake_case para camelCase para o backend Tauri
+  const payload = {
+    id,
+    categoriaId: data.categoria_id,
+    codigoEspecificacao: data.codigo_especificacao,
+    descricaoEspecificacao: data.descricao_especificacao,
+    materialComposicao: data.material_composicao,
+    unidadeMedida: data.unidade_medida,
+    codigoMaterialCompleto: data.codigo_material_completo,
+    descricaoCompleta: data.descricao_completa,
+    observacoes: data.observacoes,
+    estoqueAtual: data.estoque_atual,
+    estoqueMinimo: data.estoque_minimo,
+    // Novos campos de custos
+    custoPadraoPorUnidadeCompra: data.custo_padrao_por_unidade_compra,
+    unidadeCompraPadrao: data.unidade_compra_padrao,
+    pesoLinearKgM: data.peso_linear_kg_m,
+    pesoSuperficialKgM2: data.peso_superficial_kg_m2,
+  };
+  return await safeInvoke<Material>("update_material", payload);
 };
 
 export const deleteMaterial = async (id: string): Promise<boolean> => {

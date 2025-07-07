@@ -28,10 +28,8 @@ import {
   Material,
 } from '@/lib/api';
 
-// Cache global para evitar múltiplos carregamentos
+// Cache apenas para materiais globais (não para materiais da OP)
 const materialsCache = new Map<string, Material[]>();
-const productionOrderMaterialsCache = new Map<string, ProductionOrderMaterial[]>();
-let isLoadingMaterials = false;
 
 interface ProductionOrderMaterialsProps {
   productionOrderId: string;
@@ -61,65 +59,102 @@ export default function ProductionOrderMaterials({ productionOrderId, isEditable
 
   const { toast } = useToast();
   
-  // Ref para controlar se o componente ainda está montado
-  const isMountedRef = useRef(true);
+  // Ref para controlar carregamento único
+  const hasLoadedRef = useRef<string | null>(null);
 
-  // Cleanup effect
+  // Debug do render
+  // console.log('🔍 RENDER DEBUG:', {
+  //   loading,
+  //   materialsCount: materials.length,
+  //   allMaterialsCount: allMaterials.length,
+  //   productionOrderId,
+  //   hasLoaded: hasLoadedRef.current
+  // });
+
+  // Effect simples que carrega dados apenas uma vez por productionOrderId
+  useEffect(() => {
+    if (!productionOrderId || hasLoadedRef.current === productionOrderId) return;
+    
+    const loadData = async () => {
+      // console.log('🔄 loadData: Carregando dados para OP:', productionOrderId);
+      setLoading(true);
+      hasLoadedRef.current = productionOrderId; // Marcar como carregando
+      
+      try {
+        // 1. Carregar todos os materiais (com cache)
+        let allMaterialsData: Material[];
+        if (materialsCache.has('all')) {
+          allMaterialsData = materialsCache.get('all')!;
+          // console.log('✅ Materiais carregados do cache:', allMaterialsData.length);
+        } else {
+          // console.log('🔄 Carregando todos os materiais da API...');
+          allMaterialsData = await getAllMateriais();
+          materialsCache.set('all', allMaterialsData);
+          // console.log('✅ Materiais carregados da API:', allMaterialsData.length);
+        }
+        
+        setAllMaterials(allMaterialsData);
+        
+        // 2. Carregar materiais da OP (SEMPRE da API para dados atualizados)
+        // console.log('🔄 Carregando materiais da OP da API...');
+        const materialsData = await getProductionOrderMaterials(productionOrderId);
+        // console.log('✅ Materiais da OP carregados da API:', materialsData.length);
+        
+        // 3. Adicionar validação de estoque
+        const materialsWithValidation: MaterialWithValidation[] = materialsData.map(material => {
+          const materialDetail = allMaterialsData.find(m => m.id === material.material_id);
+          const currentStock = materialDetail?.estoque_atual ?? 0;
+          const hasInsufficientStock = material.quantity_required > currentStock;
+          
+          return {
+            ...material,
+            hasInsufficientStock
+          };
+        });
+        
+        setMaterials(materialsWithValidation);
+        // console.log('✅ Carregamento concluído com validação de estoque');
+        // console.log('🔍 DEBUG: materialsWithValidation:', materialsWithValidation);
+        
+      } catch (error) {
+        console.error('❌ Erro no carregamento:', error);
+        hasLoadedRef.current = null; // Reset em caso de erro
+        toast({
+          title: "Erro",
+          description: "Erro ao carregar dados: " + (error as Error).message,
+          variant: "destructive",
+        });
+      } finally {
+        // console.log('🔍 DEBUG: Finalizando carregamento sempre!');
+        setLoading(false);
+        // console.log('✅ DEBUG: setLoading(false) executado sempre!');
+      }
+    };
+
+    loadData();
+  }, [productionOrderId]); // Só depende do productionOrderId
+
+  // Cleanup effect - apenas para debug
   useEffect(() => {
     return () => {
-      isMountedRef.current = false;
+      // console.log('🧹 Componente sendo desmontado');
     };
   }, []);
 
-  // Função para carregar dados usando cache
-  const loadData = useCallback(async () => {
-    if (!productionOrderId || !isMountedRef.current) return;
+  // Função para recarregar dados
+  const reloadMaterials = async () => {
+    if (!productionOrderId) return;
     
-    console.log('🔄 loadData: Carregando dados para OP:', productionOrderId);
-    setLoading(true);
+    // console.log('🔄 reloadMaterials: Recarregando dados...');
     
     try {
-      // 1. Carregar todos os materiais (com cache)
-      let allMaterialsData: Material[];
-      if (materialsCache.has('all')) {
-        allMaterialsData = materialsCache.get('all')!;
-        console.log('✅ Materiais carregados do cache:', allMaterialsData.length);
-      } else {
-        if (isLoadingMaterials) {
-          console.log('⏳ Aguardando carregamento de materiais em andamento...');
-          return;
-        }
-        
-        isLoadingMaterials = true;
-        console.log('🔄 Carregando todos os materiais da API...');
-        allMaterialsData = await getAllMateriais();
-        materialsCache.set('all', allMaterialsData);
-        isLoadingMaterials = false;
-        console.log('✅ Materiais carregados da API:', allMaterialsData.length);
-      }
+      // Carregar materiais da OP (sempre da API)
+      const materialsData = await getProductionOrderMaterials(productionOrderId);
+      // console.log('✅ Materiais da OP recarregados:', materialsData.length);
       
-      if (!isMountedRef.current) return;
-      setAllMaterials(allMaterialsData);
-      
-      // 2. Carregar materiais da OP (com cache)
-      const cacheKey = `op_${productionOrderId}`;
-      let materialsData: ProductionOrderMaterial[];
-      
-      if (productionOrderMaterialsCache.has(cacheKey)) {
-        materialsData = productionOrderMaterialsCache.get(cacheKey)!;
-        console.log('✅ Materiais da OP carregados do cache:', materialsData.length);
-      } else {
-        console.log('🔄 Carregando materiais da OP da API...');
-        materialsData = await getProductionOrderMaterials(productionOrderId);
-        productionOrderMaterialsCache.set(cacheKey, materialsData);
-        console.log('✅ Materiais da OP carregados da API:', materialsData.length);
-      }
-      
-      if (!isMountedRef.current) return;
-      
-      // 3. Adicionar validação de estoque
+      // Validação de estoque com allMaterials atual
       const materialsWithValidation: MaterialWithValidation[] = materialsData.map(material => {
-        const materialDetail = allMaterialsData.find(m => m.id === material.material_id);
+        const materialDetail = allMaterials.find(m => m.id === material.material_id);
         const currentStock = materialDetail?.estoque_atual ?? 0;
         const hasInsufficientStock = material.quantity_required > currentStock;
         
@@ -130,42 +165,17 @@ export default function ProductionOrderMaterials({ productionOrderId, isEditable
       });
       
       setMaterials(materialsWithValidation);
-      console.log('✅ Carregamento concluído com validação de estoque');
+      // console.log('✅ Reload concluído');
       
     } catch (error) {
-      console.error('❌ Erro no carregamento:', error);
-      if (isMountedRef.current) {
-        toast({
-          title: "Erro",
-          description: "Erro ao carregar dados: " + (error as Error).message,
-          variant: "destructive",
-        });
-      }
-    } finally {
-      if (isMountedRef.current) {
-        setLoading(false);
-      }
+      console.error('❌ Erro no reload:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao recarregar dados: " + (error as Error).message,
+        variant: "destructive",
+      });
     }
-  }, [productionOrderId, toast]);
-
-  // Effect simples que só executa uma vez por productionOrderId
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  // Função para recarregar dados (limpa cache e recarrega)
-  const reloadMaterials = useCallback(async () => {
-    if (!productionOrderId) return;
-    
-    console.log('🔄 reloadMaterials: Limpando cache e recarregando...');
-    
-    // Limpar cache da OP específica
-    const cacheKey = `op_${productionOrderId}`;
-    productionOrderMaterialsCache.delete(cacheKey);
-    
-    // Recarregar dados
-    await loadData();
-  }, [productionOrderId, loadData]);
+  };
 
   const handleAddMaterial = async () => {
     if (!materialToAdd) {
@@ -209,12 +219,10 @@ export default function ProductionOrderMaterials({ productionOrderId, isEditable
         quantity_required: quantity,
       };
 
-      console.log('🔄 Adicionando material:', request);
+      // console.log('🔄 Adicionando material:', request);
       await addProductionOrderMaterial(request);
       
-      if (!isMountedRef.current) return;
-      
-      console.log('✅ Material adicionado com sucesso');
+      // console.log('✅ Material adicionado com sucesso');
       toast({
         title: "Sucesso",
         description: "Material adicionado à OP com sucesso!",
@@ -229,17 +237,13 @@ export default function ProductionOrderMaterials({ productionOrderId, isEditable
       
     } catch (error) {
       console.error('❌ Erro ao adicionar material à OP:', error);
-      if (isMountedRef.current) {
-        toast({
-          title: "Erro",
-          description: "Erro ao adicionar material à OP: " + (error as Error).message,
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Erro",
+        description: "Erro ao adicionar material à OP: " + (error as Error).message,
+        variant: "destructive",
+      });
     } finally {
-      if (isMountedRef.current) {
-        setIsAddingMaterial(false);
-      }
+      setIsAddingMaterial(false);
     }
   };
 
@@ -265,12 +269,10 @@ export default function ProductionOrderMaterials({ productionOrderId, isEditable
     }
 
     try {
-      console.log('🔄 Atualizando material:', editingMaterial.id, editFormData);
+      // console.log('🔄 Atualizando material:', editingMaterial.id, editFormData);
       await updateProductionOrderMaterial(editingMaterial.id, editFormData);
       
-      if (!isMountedRef.current) return;
-      
-      console.log('✅ Material atualizado com sucesso');
+      // console.log('✅ Material atualizado com sucesso');
       toast({
         title: "Sucesso",
         description: "Material atualizado com sucesso!",
@@ -284,13 +286,11 @@ export default function ProductionOrderMaterials({ productionOrderId, isEditable
       
     } catch (error) {
       console.error('❌ Erro ao atualizar material:', error);
-      if (isMountedRef.current) {
-        toast({
-          title: "Erro",
-          description: "Erro ao atualizar material: " + (error as Error).message,
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar material: " + (error as Error).message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -300,12 +300,10 @@ export default function ProductionOrderMaterials({ productionOrderId, isEditable
     }
 
     try {
-      console.log('🔄 Removendo material:', id);
+      // console.log('🔄 Removendo material:', id);
       await removeProductionOrderMaterial(id);
       
-      if (!isMountedRef.current) return;
-      
-      console.log('✅ Material removido com sucesso');
+      // console.log('✅ Material removido com sucesso');
       toast({
         title: "Sucesso",
         description: "Material removido da OP com sucesso!",
@@ -316,13 +314,11 @@ export default function ProductionOrderMaterials({ productionOrderId, isEditable
       
     } catch (error) {
       console.error('❌ Erro ao remover material:', error);
-      if (isMountedRef.current) {
-        toast({
-          title: "Erro",
-          description: "Erro ao remover material: " + (error as Error).message,
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Erro",
+        description: "Erro ao remover material: " + (error as Error).message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -352,14 +348,14 @@ export default function ProductionOrderMaterials({ productionOrderId, isEditable
 
   return (
     <>
-      <Card>
+      <Card className="w-full max-w-full overflow-hidden">
         <CardHeader>
           <div className="flex items-center gap-2">
             <Package className="h-5 w-5 text-blue-600" />
             <CardTitle className="text-lg">Materiais Necessários (BOM)</CardTitle>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="w-full max-w-full overflow-hidden">
           {/* Seção para adicionar material inline */}
           {isEditable && (
             <div className="mb-6 p-4 bg-muted/50 rounded-lg border-2 border-dashed border-muted-foreground/25">
@@ -458,18 +454,19 @@ export default function ProductionOrderMaterials({ productionOrderId, isEditable
                 {isEditable ? 'Use o formulário acima para adicionar materiais' : 'Esta OP não possui materiais definidos'}
               </p>
             </div>
-          ) : (            
-            <Table>              
-              <TableHeader>
+          ) : (
+            <div className="w-full">
+              <Table className="w-full table-auto">              
+                <TableHeader>
                 <TableRow>
-                  <TableHead>Código</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Qtd. Necessária</TableHead>
-                  <TableHead>Unidade</TableHead>
-                  <TableHead>Estoque Atual</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Consumo</TableHead>
-                  {isEditable && <TableHead>Ações</TableHead>}
+                  <TableHead className="w-[140px]">Código</TableHead>
+                  <TableHead className="w-auto min-w-[250px]">Descrição</TableHead>
+                  <TableHead className="w-[120px]">Qtd.</TableHead>
+                  <TableHead className="w-[100px]">Unid.</TableHead>
+                  <TableHead className="w-[120px]">Estoque</TableHead>
+                  <TableHead className="w-[120px]">Status</TableHead>
+                  <TableHead className="w-[140px]">Consumo</TableHead>
+                  {isEditable && <TableHead className="w-[140px]">Ações</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>                
@@ -481,63 +478,64 @@ export default function ProductionOrderMaterials({ productionOrderId, isEditable
                   
                   return (
                     <TableRow key={material.id} className={material.hasInsufficientStock ? 'bg-red-50' : ''}>
-                      <TableCell className="font-medium font-mono text-sm">
+                      <TableCell className="font-medium font-mono text-xs p-2">
                         {material.material_code}
                       </TableCell>
-                      <TableCell>
-                        <div className="max-w-xs truncate" title={material.material_name}>
+                      <TableCell className="p-2">
+                        <div className="truncate text-sm" title={material.material_name}>
                           {material.material_name}
                         </div>
                       </TableCell>
-                      <TableCell className="font-medium">
+                      <TableCell className="font-medium text-sm p-2">
                         {material.quantity_required}
                       </TableCell>
-                      <TableCell>{material.material_unit}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span>{material.current_stock || 0}</span>
+                      <TableCell className="text-sm p-2">{material.material_unit}</TableCell>
+                      <TableCell className="p-2">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-sm">{material.current_stock || 0}</span>
                           {material.hasInsufficientStock && (
-                            <Badge variant="destructive" className="text-xs">
-                              Insuficiente
+                            <Badge variant="destructive" className="text-xs px-1 py-0 h-4">
+                              Insuf.
                             </Badge>
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className={`w-3 h-3 rounded-full ${stockStatus.color}`} />
-                          <span className="text-sm">
-                            {stockStatus.status === 'available' && 'Disponível'}
-                            {stockStatus.status === 'partial' && 'Parcial'}
-                            {stockStatus.status === 'unavailable' && 'Indisponível'}
-                            {stockStatus.status === 'unknown' && 'Desconhecido'}
+                      <TableCell className="p-2">
+                        <div className="flex items-center gap-1">
+                          <div className={`w-2 h-2 rounded-full ${stockStatus.color}`} />
+                          <span className="text-xs">
+                            {stockStatus.status === 'available' && 'Disp.'}
+                            {stockStatus.status === 'partial' && 'Parc.'}
+                            {stockStatus.status === 'unavailable' && 'Indis.'}
+                            {stockStatus.status === 'unknown' && 'Desc.'}
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant={material.consumed ? "default" : "secondary"}>
-                          {material.consumed ? 'Consumido' : 'Pendente'}
+                      <TableCell className="p-2">
+                        <Badge variant={material.consumed ? "default" : "secondary"} className="text-xs px-2 py-1 h-5">
+                          {material.consumed ? 'Cons.' : 'Pend.'}
                         </Badge>
                       </TableCell>
                       {isEditable && (
-                        <TableCell>
-                          <div className="flex gap-2">
+                        <TableCell className="p-2">
+                          <div className="flex gap-1">
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => openEditDialog(material)}
                               title="Editar material"
+                              className="h-8 w-8 p-1"
                             >
-                              <Edit2 className="h-4 w-4" />
+                              <Edit2 className="h-3 w-3" />
                             </Button>
                             <Button
                               variant="ghost"
-                              size="sm"
+                              size="sm"  
                               onClick={() => handleRemoveMaterial(material.id)}
-                              className="text-red-600 hover:text-red-800"
+                              className="text-red-600 hover:text-red-800 h-8 w-8 p-1"
                               title="Remover material"
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Trash2 className="h-3 w-3" />
                             </Button>
                           </div>
                         </TableCell>
@@ -546,14 +544,15 @@ export default function ProductionOrderMaterials({ productionOrderId, isEditable
                   );
                 })}
               </TableBody>
-            </Table>          
+            </Table>
+            </div>         
           )}
         </CardContent>
       </Card>
 
       {/* Modal de Editar Material */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="max-w-[90vw] sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Material da OP</DialogTitle>
             <DialogDescription>

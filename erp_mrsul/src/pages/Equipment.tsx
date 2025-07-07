@@ -89,12 +89,12 @@ export default function EquipmentPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      console.log('🔄 [FRONTEND] Loading equipment page data...');
+      // console.log('🔄 [FRONTEND] Loading equipment page data...');
       
       // Execute migration first to ensure table has correct schema
-      console.log('🔄 [FRONTEND] Running equipment database migration...');
+      // console.log('🔄 [FRONTEND] Running equipment database migration...');
       await migrateEquipmentDatabase();
-      console.log('✅ [FRONTEND] Equipment database migration completed');
+      // console.log('✅ [FRONTEND] Equipment database migration completed');
       
       const [equipmentData, clientsData, projectsData] = await Promise.all([
         getAllEquipment(),
@@ -106,13 +106,13 @@ export default function EquipmentPage() {
       setClients(clientsData);
       setProjects(projectsData);
       
-      console.log('✅ [FRONTEND] Equipment page data loaded:', {
-        equipment: equipmentData.length,
-        clients: clientsData.length,
-        projects: projectsData.length
-      });
+      // console.log('✅ [FRONTEND] Equipment page data loaded:', {
+      //   equipment: equipmentData.length,
+      //   clients: clientsData.length,
+      //   projects: projectsData.length
+      // });
     } catch (error) {
-      console.error('❌ [FRONTEND] Failed to load equipment data:', error);
+      // console.error('❌ [FRONTEND] Failed to load equipment data:', error);
       toast({
         title: "Erro",
         description: "Falha ao carregar dados dos equipamentos.",
@@ -135,7 +135,7 @@ export default function EquipmentPage() {
     }
 
     try {
-      console.log('🔄 [FRONTEND] Creating equipment:', formData);
+      // console.log('🔄 [FRONTEND] Creating equipment:', formData);
         const newEquipment = await createEquipment({
         client_id: formData.client_id,
         project_id: formData.project_id,
@@ -144,7 +144,7 @@ export default function EquipmentPage() {
         end_date: formData.end_date || undefined,
       });
       
-      console.log('✅ [FRONTEND] Equipment created successfully:', newEquipment);
+      // console.log('✅ [FRONTEND] Equipment created successfully:', newEquipment);
       
       setEquipment(prev => [newEquipment, ...prev]);
       setIsCreateDialogOpen(false);
@@ -155,7 +155,7 @@ export default function EquipmentPage() {
         description: `Equipamento ${newEquipment.serial_number} criado com sucesso!`,
       });
     } catch (error) {
-      console.error('❌ [FRONTEND] Failed to create equipment:', error);
+      // console.error('❌ [FRONTEND] Failed to create equipment:', error);
       toast({
         title: "Erro",
         description: error instanceof Error ? error.message : "Falha ao criar equipamento.",
@@ -175,11 +175,11 @@ export default function EquipmentPage() {
     }
 
     try {
-      console.log('🔄 [FRONTEND] Updating equipment:', editingEquipment.id, editFormData);
+      // console.log('🔄 [FRONTEND] Updating equipment:', editingEquipment.id, editFormData);
       
       await updateEquipment(editingEquipment.id, editFormData);
       
-      console.log('✅ [FRONTEND] Equipment updated successfully');
+      // console.log('✅ [FRONTEND] Equipment updated successfully');
       
       // Reload data to get updated information      await loadData();
       
@@ -191,7 +191,7 @@ export default function EquipmentPage() {
         description: "Equipamento atualizado com sucesso!",
       });
     } catch (error) {
-      console.error('❌ [FRONTEND] Failed to update equipment:', error);
+      // console.error('❌ [FRONTEND] Failed to update equipment:', error);
       toast({
         title: "Erro",
         description: error instanceof Error ? error.message : "Falha ao atualizar equipamento.",
@@ -206,11 +206,11 @@ export default function EquipmentPage() {
     }
 
     try {
-      console.log('🔄 [FRONTEND] Deleting equipment:', equipmentToDelete.id);
+      // console.log('🔄 [FRONTEND] Deleting equipment:', equipmentToDelete.id);
       
       await deleteEquipment(equipmentToDelete.id);
       
-      console.log('✅ [FRONTEND] Equipment deleted successfully');
+      // console.log('✅ [FRONTEND] Equipment deleted successfully');
       
       setEquipment(prev => prev.filter(eq => eq.id !== equipmentToDelete.id));
       
@@ -219,7 +219,7 @@ export default function EquipmentPage() {
         description: "Equipamento excluído com sucesso!",
       });
     } catch (error) {
-      console.error('❌ [FRONTEND] Failed to delete equipment:', error);
+      // console.error('❌ [FRONTEND] Failed to delete equipment:', error);
       toast({
         title: "Erro",
         description: error instanceof Error ? error.message : "Falha ao excluir equipamento.",
@@ -262,7 +262,7 @@ export default function EquipmentPage() {
     return EQUIPMENT_TYPE_OPTIONS.find(option => option.value === type);
   };
 
-  console.log('🔄 [FRONTEND] Equipment component rendering, loading:', loading);
+  // console.log('🔄 [FRONTEND] Equipment component rendering, loading:', loading);
 
   if (loading) {
     return (

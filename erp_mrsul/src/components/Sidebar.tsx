@@ -38,7 +38,15 @@ const Sidebar = () => {
         { name: 'Histórico de Movimentações', path: '/stock/history' },
       ]
     },
-    { name: 'Compras', path: '/purchases', icon: <ShoppingCart className="w-5 h-5" /> },
+    {
+      name: 'Compras',
+      path: '/purchases',
+      icon: <ShoppingCart className="w-5 h-5" />,
+      dropdown: [
+        { name: 'Pedidos de Compra', path: '/purchase-orders' },
+        { name: 'Compras Geral', path: '/purchases' },
+      ]
+    },
     { name: 'Clientes', path: '/clients', icon: <Users className="w-5 h-5" /> },
     { name: 'Projetos', path: '/projects', icon: <FileText className="w-5 h-5" /> },
     { name: 'Equipamentos', path: '/equipment', icon: <HardHat className="w-5 h-5" /> },

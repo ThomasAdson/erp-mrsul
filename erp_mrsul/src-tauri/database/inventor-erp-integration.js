@@ -10,7 +10,7 @@ const path = require('path');
 
 class InventorERPIntegration {
     constructor() {
-        this.dbPath = path.join(__dirname, 'erp_mrsul.db');
+        this.dbPath = 'X:\\Thomas\\ERP\\erp_mrsul.db';
         this.inventor = null;
         this.initDatabase();
     }

@@ -10,16 +10,23 @@ import * as XLSX from 'xlsx';
 
 // Excel column headers mapping
 const EXCEL_HEADERS = {
-  categoria_id: 'Categoria ID',
+  codigo_classe: 'Código Classe',
+  nome_classe: 'Nome Classe',
+  codigo_categoria: 'Código Categoria',
+  nome_categoria: 'Nome Categoria',
   codigo_especificacao: 'Código Especificação',
   descricao_especificacao: 'Descrição Especificação',
-  material_composicao: 'Material/Composição',
-  unidade_medida: 'Unidade de Medida',
+  material_composicao: 'Material (composição)',
+  unidade_medida: 'Unidade Medida',
   codigo_material_completo: 'Código Material Completo',
   descricao_completa: 'Descrição Completa',
-  observacoes: 'Observações',
   estoque_atual: 'Estoque Atual',
-  estoque_minimo: 'Estoque Mínimo'
+  estoque_minimo: 'Estoque Mínimo',
+  // Campos de custos
+  custo_padrao_por_unidade_compra: 'Custo Padrão (R$)',
+  unidade_compra_padrao: 'Unidade de Compra',
+  peso_linear_kg_m: 'Peso Linear (kg/m)',
+  peso_superficial_kg_m2: 'Peso Superficial (kg/m²)'
 };
 
 export default function MateriaisPage() {
@@ -37,11 +44,17 @@ export default function MateriaisPage() {
     observacoes: '',
     estoque_atual: 0,
     estoque_minimo: 0,
+    // Campos de custos
+    custo_padrao_por_unidade_compra: '',
+    unidade_compra_padrao: '',
+    peso_linear_kg_m: '',
+    peso_superficial_kg_m2: '',
   });
   const [editId, setEditId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<any>({});
   const [saving, setSaving] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -71,6 +84,18 @@ export default function MateriaisPage() {
       toast({ variant: 'destructive', title: 'Erro de validação', description: 'Preencha todos os campos obrigatórios.' });
       return;
     }
+
+    // Validações para campos de custos
+    if (form.custo_padrao_por_unidade_compra && !form.unidade_compra_padrao) {
+      toast({ variant: 'destructive', title: 'Erro de validação', description: 'Se informar o custo padrão, informe também a unidade de compra.' });
+      return;
+    }
+
+    if (form.peso_linear_kg_m && form.peso_superficial_kg_m2) {
+      toast({ variant: 'destructive', title: 'Erro de validação', description: 'Informe apenas peso linear OU superficial, não ambos.' });
+      return;
+    }
+
     try {
       await createMaterial({
         categoria_id: form.categoria_id,
@@ -84,9 +109,15 @@ export default function MateriaisPage() {
         estoque_atual: Number(form.estoque_atual),
         estoque_minimo: form.estoque_minimo ? Number(form.estoque_minimo) : undefined,
         created_at: new Date().toISOString(),
+        // Campos de custos
+        custo_padrao_por_unidade_compra: form.custo_padrao_por_unidade_compra ? Number(form.custo_padrao_por_unidade_compra) : undefined,
+        unidade_compra_padrao: form.unidade_compra_padrao || undefined,
+        peso_linear_kg_m: form.peso_linear_kg_m ? Number(form.peso_linear_kg_m) : undefined,
+        peso_superficial_kg_m2: form.peso_superficial_kg_m2 ? Number(form.peso_superficial_kg_m2) : undefined,
       });
       setForm({
         categoria_id: '', codigo_especificacao: '', descricao_especificacao: '', material_composicao: '', unidade_medida: '', codigo_material_completo: '', descricao_completa: '', observacoes: '', estoque_atual: 0, estoque_minimo: 0,
+        custo_padrao_por_unidade_compra: '', unidade_compra_padrao: '', peso_linear_kg_m: '', peso_superficial_kg_m2: '',
       });
       toast({ title: 'Item cadastrado!' });
       fetchMateriais();
@@ -99,12 +130,20 @@ export default function MateriaisPage() {
 
   const startEdit = (mat: Material) => {
     setEditId(mat.id);
-    setEditForm({ ...mat });
+    setEditForm({ 
+      ...mat,
+      // Converter valores para string para os inputs
+      custo_padrao_por_unidade_compra: mat.custo_padrao_por_unidade_compra?.toString() || '',
+      peso_linear_kg_m: mat.peso_linear_kg_m?.toString() || '',
+      peso_superficial_kg_m2: mat.peso_superficial_kg_m2?.toString() || '',
+    });
+    setEditModalOpen(true);
   };
 
   const cancelEdit = () => {
     setEditId(null);
     setEditForm({});
+    setEditModalOpen(false);
   };
 
   const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -117,12 +156,28 @@ export default function MateriaisPage() {
       toast({ variant: 'destructive', title: 'Erro de validação', description: 'Preencha todos os campos obrigatórios.' });
       return;
     }
+
+    // Validações para campos de custos
+    if (editForm.custo_padrao_por_unidade_compra && !editForm.unidade_compra_padrao) {
+      toast({ variant: 'destructive', title: 'Erro de validação', description: 'Se informar o custo padrão, informe também a unidade de compra.' });
+      return;
+    }
+
+    if (editForm.peso_linear_kg_m && editForm.peso_superficial_kg_m2) {
+      toast({ variant: 'destructive', title: 'Erro de validação', description: 'Informe apenas peso linear OU superficial, não ambos.' });
+      return;
+    }
+
     try {
       setSaving(true);
       await updateMaterial(editId!, {
         ...editForm,
         estoque_atual: Number(editForm.estoque_atual),
         estoque_minimo: editForm.estoque_minimo ? Number(editForm.estoque_minimo) : null,
+        // Campos de custos
+        custo_padrao_por_unidade_compra: editForm.custo_padrao_por_unidade_compra ? Number(editForm.custo_padrao_por_unidade_compra) : undefined,
+        peso_linear_kg_m: editForm.peso_linear_kg_m ? Number(editForm.peso_linear_kg_m) : undefined,
+        peso_superficial_kg_m2: editForm.peso_superficial_kg_m2 ? Number(editForm.peso_superficial_kg_m2) : undefined,
       });
       toast({ title: 'Material atualizado!' });
       cancelEdit();
@@ -201,18 +256,30 @@ export default function MateriaisPage() {
   // Excel functions
   const handleExport = () => {
     const worksheet = XLSX.utils.json_to_sheet(
-      materiais.map(mat => ({
-        [EXCEL_HEADERS.categoria_id]: categorias.find(c => c.id === mat.categoria_id)?.nome_categoria || mat.categoria_id,
-        [EXCEL_HEADERS.codigo_especificacao]: mat.codigo_especificacao,
-        [EXCEL_HEADERS.descricao_especificacao]: mat.descricao_especificacao,
-        [EXCEL_HEADERS.material_composicao]: mat.material_composicao,
-        [EXCEL_HEADERS.unidade_medida]: mat.unidade_medida,
-        [EXCEL_HEADERS.codigo_material_completo]: mat.codigo_material_completo,
-        [EXCEL_HEADERS.descricao_completa]: mat.descricao_completa,
-        [EXCEL_HEADERS.observacoes]: mat.observacoes,
-        [EXCEL_HEADERS.estoque_atual]: mat.estoque_atual,
-        [EXCEL_HEADERS.estoque_minimo]: mat.estoque_minimo
-      }))
+      materiais.map(mat => {
+        const categoria = categorias.find(c => c.id === mat.categoria_id);
+        const classe = categoria ? classes.find(cl => cl.id === categoria.material_class_id) : null;
+        
+        return {
+          [EXCEL_HEADERS.codigo_classe]: classe?.codigo || '',
+          [EXCEL_HEADERS.nome_classe]: classe?.nome || '',
+          [EXCEL_HEADERS.codigo_categoria]: categoria?.codigo_categoria || '',
+          [EXCEL_HEADERS.nome_categoria]: categoria?.nome_categoria || '',
+          [EXCEL_HEADERS.codigo_especificacao]: mat.codigo_especificacao,
+          [EXCEL_HEADERS.descricao_especificacao]: mat.descricao_especificacao,
+          [EXCEL_HEADERS.material_composicao]: mat.material_composicao,
+          [EXCEL_HEADERS.unidade_medida]: mat.unidade_medida,
+          [EXCEL_HEADERS.codigo_material_completo]: mat.codigo_material_completo,
+          [EXCEL_HEADERS.descricao_completa]: mat.descricao_completa,
+          [EXCEL_HEADERS.estoque_atual]: mat.estoque_atual,
+          [EXCEL_HEADERS.estoque_minimo]: mat.estoque_minimo,
+          // Campos de custos
+          [EXCEL_HEADERS.custo_padrao_por_unidade_compra]: mat.custo_padrao_por_unidade_compra || '',
+          [EXCEL_HEADERS.unidade_compra_padrao]: mat.unidade_compra_padrao || '',
+          [EXCEL_HEADERS.peso_linear_kg_m]: mat.peso_linear_kg_m || '',
+          [EXCEL_HEADERS.peso_superficial_kg_m2]: mat.peso_superficial_kg_m2 || ''
+        };
+      })
     );
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Materiais");
@@ -221,16 +288,23 @@ export default function MateriaisPage() {
 
   const handleGenerateTemplate = () => {
     const template = [{
-      [EXCEL_HEADERS.categoria_id]: "",
-      [EXCEL_HEADERS.codigo_especificacao]: "",
-      [EXCEL_HEADERS.descricao_especificacao]: "",
-      [EXCEL_HEADERS.material_composicao]: "",
-      [EXCEL_HEADERS.unidade_medida]: "",
-      [EXCEL_HEADERS.codigo_material_completo]: "",
-      [EXCEL_HEADERS.descricao_completa]: "",
-      [EXCEL_HEADERS.observacoes]: "",
-      [EXCEL_HEADERS.estoque_atual]: "",
-      [EXCEL_HEADERS.estoque_minimo]: ""
+      [EXCEL_HEADERS.codigo_classe]: "001",
+      [EXCEL_HEADERS.nome_classe]: "Materia Prima",
+      [EXCEL_HEADERS.codigo_categoria]: "0001",
+      [EXCEL_HEADERS.nome_categoria]: "Tubo Quadrado",
+      [EXCEL_HEADERS.codigo_especificacao]: "0001",
+      [EXCEL_HEADERS.descricao_especificacao]: "20 x 20 x 1",
+      [EXCEL_HEADERS.material_composicao]: "ASTM A36",
+      [EXCEL_HEADERS.unidade_medida]: "metro",
+      [EXCEL_HEADERS.codigo_material_completo]: "001-0001-0001",
+      [EXCEL_HEADERS.descricao_completa]: "Tubo Quadrado 20 x 20 x 1 - ASTM A36",
+      [EXCEL_HEADERS.estoque_atual]: "48",
+      [EXCEL_HEADERS.estoque_minimo]: "12",
+      // Campos de custos
+      [EXCEL_HEADERS.custo_padrao_por_unidade_compra]: "4.8",
+      [EXCEL_HEADERS.unidade_compra_padrao]: "kg",
+      [EXCEL_HEADERS.peso_linear_kg_m]: "6.7824",
+      [EXCEL_HEADERS.peso_superficial_kg_m2]: ""
     }];
     const worksheet = XLSX.utils.json_to_sheet(template);
     const workbook = XLSX.utils.book_new();
@@ -252,8 +326,14 @@ export default function MateriaisPage() {
 
         // Validate and transform data
         const materiaisToImport = jsonData.map((row: any) => {
-          const categoria = categorias.find(c => c.nome_categoria === row[EXCEL_HEADERS.categoria_id]);
-          if (!categoria) throw new Error(`Categoria não encontrada: ${row[EXCEL_HEADERS.categoria_id]}`);
+          // Encontrar categoria pelo código ou nome
+          const categoria = categorias.find(c => 
+            c.codigo_categoria === row[EXCEL_HEADERS.codigo_categoria] || 
+            c.nome_categoria === row[EXCEL_HEADERS.nome_categoria]
+          );
+          if (!categoria) {
+            throw new Error(`Categoria não encontrada: ${row[EXCEL_HEADERS.codigo_categoria]} - ${row[EXCEL_HEADERS.nome_categoria]}`);
+          }
 
           return {
             categoria_id: categoria.id,
@@ -263,10 +343,14 @@ export default function MateriaisPage() {
             unidade_medida: row[EXCEL_HEADERS.unidade_medida],
             codigo_material_completo: row[EXCEL_HEADERS.codigo_material_completo],
             descricao_completa: row[EXCEL_HEADERS.descricao_completa],
-            observacoes: row[EXCEL_HEADERS.observacoes],
             estoque_atual: Number(row[EXCEL_HEADERS.estoque_atual]) || 0,
             estoque_minimo: Number(row[EXCEL_HEADERS.estoque_minimo]) || 0,
             created_at: new Date().toISOString(),
+            // Campos de custos
+            custo_padrao_por_unidade_compra: row[EXCEL_HEADERS.custo_padrao_por_unidade_compra] ? Number(row[EXCEL_HEADERS.custo_padrao_por_unidade_compra]) : undefined,
+            unidade_compra_padrao: row[EXCEL_HEADERS.unidade_compra_padrao] || undefined,
+            peso_linear_kg_m: row[EXCEL_HEADERS.peso_linear_kg_m] ? Number(row[EXCEL_HEADERS.peso_linear_kg_m]) : undefined,
+            peso_superficial_kg_m2: row[EXCEL_HEADERS.peso_superficial_kg_m2] ? Number(row[EXCEL_HEADERS.peso_superficial_kg_m2]) : undefined,
           };
         });
 
@@ -321,6 +405,7 @@ export default function MateriaisPage() {
                   <th className="px-4 py-3.5 text-left text-sm font-semibold">Código</th>
                   <th className="px-4 py-3.5 text-left text-sm font-semibold">Descrição</th>
                   <th className="px-4 py-3.5 text-left text-sm font-semibold">Categoria</th>
+                  <th className="px-4 py-3.5 text-right text-sm font-semibold">Custo/Un. Estoque</th>
                   <th className="px-4 py-3.5 text-right text-sm font-semibold">Ações</th>
                 </tr>
               </thead>
@@ -330,6 +415,12 @@ export default function MateriaisPage() {
                     <td className="px-4 py-4 text-sm font-mono">{mat.codigo_material_completo}</td>
                     <td className="px-4 py-4 text-sm">{mat.descricao_completa}</td>
                     <td className="px-4 py-4 text-sm">{categorias.find(c => c.id === mat.categoria_id)?.nome_categoria || mat.categoria_id}</td>
+                    <td className="px-4 py-4 text-sm text-right font-mono">
+                      {mat.custo_por_unidade_estoque ? 
+                        `R$ ${mat.custo_por_unidade_estoque.toFixed(2)}` : 
+                        <span className="text-muted-foreground">-</span>
+                      }
+                    </td>
                     <td className="px-4 py-4 text-sm text-right">
                       <div className="flex justify-end gap-2">
                         <Button size="sm" variant="ghost" onClick={() => startEdit(mat)}>Editar</Button>
@@ -394,7 +485,271 @@ export default function MateriaisPage() {
               <Label htmlFor="estoque_minimo">Estoque Mínimo</Label>
               <Input id="estoque_minimo" name="estoque_minimo" type="number" value={form.estoque_minimo} onChange={handleChange} />
             </div>
+            
+            {/* Seção de Custos */}
+            <div className="space-y-4 border-t pt-4">
+              <h3 className="text-lg font-semibold text-muted-foreground">💰 Informações de Custos</h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="custo_padrao_por_unidade_compra">Custo Padrão (R$)</Label>
+                  <Input 
+                    id="custo_padrao_por_unidade_compra" 
+                    name="custo_padrao_por_unidade_compra" 
+                    type="number" 
+                    step="0.01"
+                    placeholder="Ex: 8.50"
+                    value={form.custo_padrao_por_unidade_compra} 
+                    onChange={handleChange} 
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="unidade_compra_padrao">Unidade de Compra</Label>
+                  <select 
+                    id="unidade_compra_padrao" 
+                    name="unidade_compra_padrao" 
+                    value={form.unidade_compra_padrao} 
+                    onChange={handleChange} 
+                    className="w-full border rounded p-2"
+                  >
+                    <option value="">Selecione</option>
+                    <option value="kg">kg (quilograma)</option>
+                    <option value="metro">metro</option>
+                    <option value="m2">m² (metro quadrado)</option>
+                    <option value="peça">peça</option>
+                    <option value="litro">litro</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="peso_linear_kg_m">Peso Linear (kg/m)</Label>
+                  <Input 
+                    id="peso_linear_kg_m" 
+                    name="peso_linear_kg_m" 
+                    type="number" 
+                    step="0.001"
+                    placeholder="Ex: 1.47"
+                    value={form.peso_linear_kg_m} 
+                    onChange={handleChange} 
+                  />
+                  <p className="text-xs text-muted-foreground">Para materiais vendidos por metro</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="peso_superficial_kg_m2">Peso Superficial (kg/m²)</Label>
+                  <Input 
+                    id="peso_superficial_kg_m2" 
+                    name="peso_superficial_kg_m2" 
+                    type="number" 
+                    step="0.001"
+                    placeholder="Ex: 23.5"
+                    value={form.peso_superficial_kg_m2} 
+                    onChange={handleChange} 
+                  />
+                  <p className="text-xs text-muted-foreground">Para materiais vendidos por m²</p>
+                </div>
+              </div>
+            </div>
+            
             <Button type="submit">Salvar</Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Edição */}
+      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Item</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUpdate} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit_categoria_id">Categoria</Label>
+              <select 
+                id="edit_categoria_id" 
+                name="categoria_id" 
+                value={editForm.categoria_id || ''} 
+                onChange={handleEditChange} 
+                className="w-full border rounded p-2"
+              >
+                <option value="">Selecione a categoria</option>
+                {categorias.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.codigo_categoria} - {cat.nome_categoria}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit_codigo_especificacao">Código Especificação</Label>
+              <Input 
+                id="edit_codigo_especificacao" 
+                name="codigo_especificacao" 
+                value={editForm.codigo_especificacao || ''} 
+                onChange={handleEditChange} 
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit_descricao_especificacao">Descrição Especificação</Label>
+              <Input 
+                id="edit_descricao_especificacao" 
+                name="descricao_especificacao" 
+                value={editForm.descricao_especificacao || ''} 
+                onChange={handleEditChange} 
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit_material_composicao">Material/Composição</Label>
+              <Input 
+                id="edit_material_composicao" 
+                name="material_composicao" 
+                value={editForm.material_composicao || ''} 
+                onChange={handleEditChange} 
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit_unidade_medida">Unidade de Medida</Label>
+              <Input 
+                id="edit_unidade_medida" 
+                name="unidade_medida" 
+                value={editForm.unidade_medida || ''} 
+                onChange={handleEditChange} 
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit_codigo_material_completo">Código Material Completo</Label>
+              <Input 
+                id="edit_codigo_material_completo" 
+                name="codigo_material_completo" 
+                value={editForm.codigo_material_completo || ''} 
+                onChange={handleEditChange} 
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit_descricao_completa">Descrição Completa</Label>
+              <Input 
+                id="edit_descricao_completa" 
+                name="descricao_completa" 
+                value={editForm.descricao_completa || ''} 
+                onChange={handleEditChange} 
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit_observacoes">Observações</Label>
+              <Input 
+                id="edit_observacoes" 
+                name="observacoes" 
+                value={editForm.observacoes || ''} 
+                onChange={handleEditChange} 
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit_estoque_atual">Estoque Atual</Label>
+              <Input 
+                id="edit_estoque_atual" 
+                name="estoque_atual" 
+                type="number" 
+                value={editForm.estoque_atual || 0} 
+                onChange={handleEditChange} 
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit_estoque_minimo">Estoque Mínimo</Label>
+              <Input 
+                id="edit_estoque_minimo" 
+                name="estoque_minimo" 
+                type="number" 
+                value={editForm.estoque_minimo || 0} 
+                onChange={handleEditChange} 
+              />
+            </div>
+
+            {/* Seção de Custos */}
+            <div className="space-y-4 border-t pt-4">
+              <h3 className="text-lg font-semibold text-muted-foreground">💰 Informações de Custos</h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit_custo_padrao_por_unidade_compra">Custo Padrão (R$)</Label>
+                  <Input 
+                    id="edit_custo_padrao_por_unidade_compra" 
+                    name="custo_padrao_por_unidade_compra" 
+                    type="number" 
+                    step="0.01"
+                    placeholder="Ex: 8.50"
+                    value={editForm.custo_padrao_por_unidade_compra || ''} 
+                    onChange={handleEditChange} 
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="edit_unidade_compra_padrao">Unidade de Compra</Label>
+                  <select 
+                    id="edit_unidade_compra_padrao" 
+                    name="unidade_compra_padrao" 
+                    value={editForm.unidade_compra_padrao || ''} 
+                    onChange={handleEditChange} 
+                    className="w-full border rounded p-2"
+                  >
+                    <option value="">Selecione</option>
+                    <option value="kg">kg (quilograma)</option>
+                    <option value="metro">metro</option>
+                    <option value="m2">m² (metro quadrado)</option>
+                    <option value="peça">peça</option>
+                    <option value="litro">litro</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit_peso_linear_kg_m">Peso Linear (kg/m)</Label>
+                  <Input 
+                    id="edit_peso_linear_kg_m" 
+                    name="peso_linear_kg_m" 
+                    type="number" 
+                    step="0.001"
+                    placeholder="Ex: 1.47"
+                    value={editForm.peso_linear_kg_m || ''} 
+                    onChange={handleEditChange} 
+                  />
+                  <p className="text-xs text-muted-foreground">Para materiais vendidos por metro</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="edit_peso_superficial_kg_m2">Peso Superficial (kg/m²)</Label>
+                  <Input 
+                    id="edit_peso_superficial_kg_m2" 
+                    name="peso_superficial_kg_m2" 
+                    type="number" 
+                    step="0.001"
+                    placeholder="Ex: 23.5"
+                    value={editForm.peso_superficial_kg_m2 || ''} 
+                    onChange={handleEditChange} 
+                  />
+                  <p className="text-xs text-muted-foreground">Para materiais vendidos por m²</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button type="submit" disabled={saving}>
+                {saving ? 'Salvando...' : 'Salvar'}
+              </Button>
+              <Button type="button" variant="outline" onClick={cancelEdit}>
+                Cancelar
+              </Button>
+            </div>
           </form>
         </DialogContent>
       </Dialog>

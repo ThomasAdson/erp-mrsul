@@ -44,7 +44,6 @@ var sqlite3_1 = require("sqlite3");
 var fs_1 = require("fs");
 // Configuração do banco de dados
 var DATABASE_PATH = "X:\\Thomas\\ERP\\erp_mrsul.db";
-var FALLBACK_DATABASE_PATH = "./erp_mrsul.db";
 // Classe para gerenciar conexão SQLite com promessas
 var SQLiteDatabase = /** @class */ (function () {
     function SQLiteDatabase(dbPath) {
@@ -448,9 +447,9 @@ function main() {
                     _a.trys.push([0, 3, , 4]);
                     dbPath = DATABASE_PATH;
                     if (!fs_1.default.existsSync(DATABASE_PATH)) {
-                        console.error("Banco principal n\u00E3o encontrado em: ".concat(DATABASE_PATH));
-                        console.error("Tentando conectar ao banco local: ".concat(FALLBACK_DATABASE_PATH));
-                        dbPath = FALLBACK_DATABASE_PATH;
+                        console.error("Banco não encontrado em: ".concat(DATABASE_PATH));
+                        console.error("Verifique se o banco de dados existe no caminho correto.");
+                        process.exit(1);
                     }
                     // Conectar ao banco
                     return [4 /*yield*/, database.connect()];

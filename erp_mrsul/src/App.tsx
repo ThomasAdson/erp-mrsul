@@ -19,6 +19,8 @@ import TestDataPage from './pages/TestDataPage';
 import StockMovementPage from './pages/StockMovementPage';
 import StockHistoryPage from './pages/StockHistoryPage';
 import FornecedoresPage from './pages/FornecedoresPage';
+import PurchaseOrdersPage from './pages/PurchaseOrdersPage';
+import PurchaseOrderDetailsPage from './pages/PurchaseOrderDetailsPage';
 
 function App() {
   return (
@@ -31,6 +33,8 @@ function App() {
       <Route path="/settings" element={<Layout><Settings /></Layout>} />
       <Route path="/inventory" element={<Layout><Inventory /></Layout>} />
       <Route path="/purchases" element={<Layout><Purchases /></Layout>} />
+      <Route path="/purchase-orders" element={<Layout><PurchaseOrdersPage /></Layout>} />
+      <Route path="/purchase-orders/:id" element={<Layout><PurchaseOrderDetailsPage /></Layout>} />
       <Route path="/clients" element={<Layout><ClientsPage /></Layout>} />
       <Route path="/projects" element={<Layout><Projects /></Layout>} />
       <Route path="/equipment" element={<Layout><Equipment /></Layout>} />
