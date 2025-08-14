@@ -1,152 +1,73 @@
-# ERP MRSul - Sistema Industrial ERP
+# 👋 Hi, I'm Thomas Adson Marcos Bezerra
 
-Um sistema ERP completo desenvolvido com **Tauri**, **React** e **TypeScript** para gestão industrial.
+I'm a junior full stack developer and mechanical engineering student from Brazil, passionate about building products and learning new technologies – especially in automation and AI. I have hands-on experience developing desktop and web applications with Tauri + Rust, React, TypeScript, PostgreSQL, and Figma.
 
-## 🚀 Tecnologias
+## 🧑‍💻 Main Stack
 
-- **Frontend**: React 18 + TypeScript + Vite
-- **Backend**: Tauri (Rust)
-- **Banco de Dados**: SQLite
-- **UI**: Tailwind CSS + Lucide Icons
-- **Gerenciamento de Estado**: React Hooks
+- TypeScript, JavaScript, Rust, Java, C#
+- React, Tauri, Unity
+- PostgreSQL, SQL
+- Figma (UX/UI Design)
+- Git & GitHub
 
-## 📋 Funcionalidades
+## 🚀 Featured Projects
 
-### ✅ Módulos Implementados
-- **Cadastros**
-  - Classes de Materiais
-  - Categorias
-  - Materiais/Itens
-  - Fornecedores
-- **Gestão de Estoque**
-  - Movimentação de estoque
-  - Histórico de movimentações
-  - Controle de saldo
-- **Clientes**
-  - Cadastro e gestão de clientes
-- **Projetos**
-  - Controle de projetos
-- **Equipamentos**
-  - Cadastro de equipamentos
-  - Especificações técnicas
-  - Ordens de Produção (OP)
-  - Gestão de materiais necessários (BOM)
+### Industrial ERP Desktop Application
+**Period:** Jan 2025 – Apr 2025  
+**Company:** MRSUL (Suzano, Brazil)  
+**Role:** Full Stack Developer (Freelance)
 
-### 🔄 Em Desenvolvimento
-- Módulo de Compras
-- Relatórios avançados
-- Dashboard com métricas
+**Description:**  
+Developed a desktop ERP for an industrial machinery company, covering modules for Purchasing, Finance, Production, Projects, CRM, Sales, and Maintenance.  
+- Architecture: Tauri + Rust
+- Frontend: React + TypeScript
+- Database: PostgreSQL (local server)
+- UX/UI: Designed all screens and flows in Figma
+- Impact: Improved process visibility and efficiency for internal teams
 
-## 🛠️ Instalação e Configuração
+**Screenshots:**   
+<img width="1551" height="873" alt="image" src="https://github.com/user-attachments/assets/d76043da-f6d5-4816-9686-cd8fb4f5396a" />
+<img width="1552" height="869" alt="image" src="https://github.com/user-attachments/assets/022726b6-eb69-4122-9a05-6b5edaf870f7" />
+<img width="1551" height="870" alt="image" src="https://github.com/user-attachments/assets/f8e2a52e-8c90-4a4a-b5bf-e6f427ca6244" />
+<img width="1905" height="1042" alt="image" src="https://github.com/user-attachments/assets/36a97402-359c-4469-bf97-2a8d2496ee57" />
+<img width="1904" height="1039" alt="image" src="https://github.com/user-attachments/assets/2263ee7e-4ad8-451f-b9a6-43765fb970e0" />
 
-### Pré-requisitos
-- **Node.js** (versão 18 ou superior)
-- **Rust** (para compilação do Tauri)
-- **Git**
-
-### 1. Clone o repositório
-```bash
-git clone https://github.com/seu-usuario/erp-mrsul.git
-cd erp-mrsul
-```
-
-### 2. Instale as dependências
-```bash
-# Dependências do frontend
-cd erp_mrsul
-npm install
-
-# Dependências do Tauri (Rust)
-cd src-tauri
-cargo build
-```
-
-### 3. Execute o projeto
-
-#### Modo Desenvolvimento
-```bash
-cd erp_mrsul
-npm run tauri dev
-```
-
-#### Build de Produção
-```bash
-cd erp_mrsul
-npm run tauri build
-```
-
-## 📁 Estrutura do Projeto
-
-```
-erp_mrsul/
-├── src/                          # Frontend React
-│   ├── components/              # Componentes reutilizáveis
-│   │   ├── ui/                 # Componentes de UI base
-│   │   └── ...
-│   ├── pages/                  # Páginas da aplicação
-│   ├── lib/                    # Utilitários e API
-│   └── types/                  # Tipos TypeScript
-├── src-tauri/                   # Backend Tauri (Rust)
-│   ├── src/                    # Código Rust
-│   │   ├── equipment.rs        # Módulo de equipamentos
-│   │   ├── material.rs         # Módulo de materiais
-│   │   ├── production_order.rs # Ordens de produção
-│   │   └── ...
-│   └── Cargo.toml              # Dependências Rust
-├── public/                      # Arquivos estáticos
-└── package.json                # Dependências Node.js
-```
-
-## 🔧 Scripts Disponíveis
-
-- `npm run dev` - Inicia o frontend em modo desenvolvimento
-- `npm run build` - Build de produção do frontend
-- `npm run tauri dev` - Inicia a aplicação Tauri em desenvolvimento
-- `npm run tauri build` - Build completo da aplicação
-
-## 📊 Banco de Dados
-
-O sistema utiliza **SQLite** como banco de dados, com as seguintes tabelas principais:
-
-- `material_classes` - Classes de materiais
-- `categorias` - Categorias de produtos
-- `materiais` - Cadastro de materiais
-- `fornecedores` - Fornecedores
-- `clientes` - Clientes
-- `equipamentos` - Equipamentos
-- `production_orders` - Ordens de produção
-- `production_order_materials` - Materiais das OPs
-- `stock_movements` - Movimentações de estoque
-
-## 🚀 Como Contribuir
-
-1. Fork o projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
-
-## 📝 Notas de Desenvolvimento
-
-### Últimas Atualizações
-- ✅ Correção do loop infinito no carregamento de materiais das OPs
-- ✅ Implementação do cache global para materiais
-- ✅ Melhoria na largura dos modais de criação/edição de OPs
-- ✅ Interface moderna para seleção de materiais (sem modal)
-- ✅ Validação de estoque em tempo real
-
-### Próximos Passos
-- [ ] Implementar relatórios de estoque
-- [ ] Adicionar autenticação de usuários
-- [ ] Melhorar performance da interface
-- [ ] Adicionar testes automatizados
-
-
-## 👥 Equipe
-
-- **Desenvolvimento**: Thomas Adson
-- **E-mail**: thomasadson14@gmail.com
 
 ---
 
-**ERP MRSul** - Sistema de gestão industrial completo e moderno.
+### Project Management App (Kanban, Gantt, 5S)
+**Period:** Jul 2025 – Aug 2025  
+**Company:** MRSUL (Suzano, Brazil)  
+**Role:** Full Stack Developer (Freelance)
+
+**Description:**  
+Built a project management tool with Kanban boards, Gantt charts, and 5S methodology to organize tasks and schedules.  
+- Frontend: React + TypeScript
+- Database: SQL/PostgreSQL
+- UX/UI: Designed in Figma
+- Impact: Helped teams manage deadlines and project organization
+
+**Screenshots:**  
+![Kanban Board](kanban-board.png)  
+*Add more images here*
+
+---
+
+### Other Experiences
+
+- Developed add-ins in Autodesk Inventor using C# for automation/integration
+- Built a prototype game in Unity
+
+## 🎓 Education
+
+- Mechanical Engineering (Universidade Braz Cubas), 2023–2027 (in progress)
+
+## 📫 Contact
+
+- Email: thomasadson14@gmail.com
+- LinkedIn: [thomas-adson-bezerra-61a108169](https://www.linkedin.com/in/thomas-adson-bezerra-61a108169/)
+- GitHub: [ThomasAdson](https://github.com/ThomasAdson)
+
+---
+
+*This portfolio highlights selected projects. For more details or collaboration opportunities, feel free to reach out!*
