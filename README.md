@@ -141,14 +141,11 @@ O sistema utiliza **SQLite** como banco de dados, com as seguintes tabelas princ
 - [ ] Melhorar performance da interface
 - [ ] Adicionar testes automatizados
 
-## 📄 Licença
-
-Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
 
 ## 👥 Equipe
 
 - **Desenvolvimento**: Thomas Adson
-- **E-mail**: thomasadson20@gmail.com
+- **E-mail**: thomasadson14@gmail.com
 
 ---
 
