@@ -29,8 +29,7 @@ Developed a desktop ERP for an industrial machinery company, covering modules fo
 <img width="1551" height="873" alt="image" src="https://github.com/user-attachments/assets/d76043da-f6d5-4816-9686-cd8fb4f5396a" />
 <img width="1552" height="869" alt="image" src="https://github.com/user-attachments/assets/022726b6-eb69-4122-9a05-6b5edaf870f7" />
 <img width="1551" height="870" alt="image" src="https://github.com/user-attachments/assets/f8e2a52e-8c90-4a4a-b5bf-e6f427ca6244" />
-<img width="1905" height="1042" alt="image" src="https://github.com/user-attachments/assets/36a97402-359c-4469-bf97-2a8d2496ee57" />
-<img width="1904" height="1039" alt="image" src="https://github.com/user-attachments/assets/2263ee7e-4ad8-451f-b9a6-43765fb970e0" />
+
 
 
 ---
@@ -48,8 +47,8 @@ Built a project management tool with Kanban boards, Gantt charts, and 5S methodo
 - Impact: Helped teams manage deadlines and project organization
 
 **Screenshots:**  
-![Kanban Board](kanban-board.png)  
-*Add more images here*
+<img width="1905" height="1042" alt="image" src="https://github.com/user-attachments/assets/36a97402-359c-4469-bf97-2a8d2496ee57" />
+<img width="1904" height="1039" alt="image" src="https://github.com/user-attachments/assets/2263ee7e-4ad8-451f-b9a6-43765fb970e0" />
 
 ---
 
